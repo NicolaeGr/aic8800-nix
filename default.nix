@@ -17,12 +17,10 @@ stdenv.mkDerivation rec {
   ];
   nativeBuildInputs = kernel.moduleBuildDependencies;
 
-  makeFlags =
-    kernel.makeFlags
-    ++ [
-      "KDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
-      "INSTALL_MOD_PATH=${placeholder "out"}"
-    ];
+  makeFlags = kernel.makeFlags ++ [
+    "KDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+    "INSTALL_MOD_PATH=${placeholder "out"}"
+  ];
 
   # Apply NixOS-specific patches to make the driver work correctly
   postPatch = ''
@@ -38,10 +36,22 @@ stdenv.mkDerivation rec {
     # The kernel firmware loader expects firmware in subdirectories
     # NixOS organizes firmware as: /run/current-system/firmware/aic8800D80/*.bin
     substituteInPlace drivers/aic8800/aic_load_fw/aic_compat_8800d80.h \
+      --replace-fail '"fmacfw_8800d80.bin"' '"aic8800D80/fmacfw_8800d80.bin"' \
+      --replace-fail '"fmacfw_rf_8800d80.bin"' '"aic8800D80/fmacfw_rf_8800d80.bin"' \
+      --replace-fail '"fw_patch_8800d80.bin"' '"aic8800D80/fw_patch_8800d80.bin"' \
+      --replace-fail '"fw_adid_8800d80.bin"' '"aic8800D80/fw_adid_8800d80.bin"' \
+      --replace-fail '"fw_patch_table_8800d80.bin"' '"aic8800D80/fw_patch_table_8800d80.bin"' \
       --replace-fail '"fmacfw_8800d80_u02.bin"' '"aic8800D80/fmacfw_8800d80_u02.bin"' \
       --replace-fail '"fmacfw_8800d80_u02_ipc.bin"' '"aic8800D80/fmacfw_8800d80_u02_ipc.bin"' \
       --replace-fail '"fmacfw_8800d80_h_u02.bin"' '"aic8800D80/fmacfw_8800d80_h_u02.bin"' \
-      --replace-fail '"fmacfw_8800d80_h_u02_ipc.bin"' '"aic8800D80/fmacfw_8800d80_h_u02_ipc.bin"'
+      --replace-fail '"fmacfw_8800d80_h_u02_ipc.bin"' '"aic8800D80/fmacfw_8800d80_h_u02_ipc.bin"' \
+      --replace-fail '"lmacfw_rf_8800d80_u02.bin"' '"aic8800D80/lmacfw_rf_8800d80_u02.bin"' \
+      --replace-fail '"fw_patch_8800d80_u02.bin"' '"aic8800D80/fw_patch_8800d80_u02.bin"' \
+      --replace-fail '"fw_patch_8800d80_u02_ext"' '"aic8800D80/fw_patch_8800d80_u02_ext"' \
+      --replace-fail '"fw_adid_8800d80_u02.bin"' '"aic8800D80/fw_adid_8800d80_u02.bin"' \
+      --replace-fail '"calibmode_8800d80.bin"' '"aic8800D80/calibmode_8800d80.bin"' \
+      --replace-fail '"fw_patch_table_8800d80_u02.bin"' '"aic8800D80/fw_patch_table_8800d80_u02.bin"' \
+      --replace-fail '"aic_userconfig_8800d80.txt"' '"aic8800D80/aic_userconfig_8800d80.txt"'
 
     # Patch 3: Fix in_irq() removed in kernel 6.19
     # in_irq() was deprecated and replaced with in_hardirq() in 2020
@@ -86,17 +96,17 @@ stdenv.mkDerivation rec {
   '';
 
   meta = with lib; {
-    description = "Linux kernel driver for AIC8800D80 WiFi 6 chipset";
+    description = "Linux kernel driver for AIC8800D80 WiFi 6 + Bluetooth chipset";
     longDescription = ''
-      Kernel driver for AIC8800D80 WiFi 6 chipset with NixOS-specific patches.
+      Kernel driver for AIC8800D80/D81 WiFi 6 + Bluetooth chipset with NixOS-specific patches.
 
       This driver supports USB WiFi adapters based on the AIC8800D80 chipset,
       such as Tenda U11 and AX913B. It provides WiFi 6 (802.11ax) functionality.
+      On combo chips (D81 variant, e.g. 368b:8d81), Bluetooth is supported via
+      the aic_load_fw firmware loader module.
 
       The package includes patches to work correctly with NixOS's firmware
       management system, fixing hardcoded paths and firmware loading issues.
-
-      Note: Bluetooth functionality is not currently supported.
     '';
     homepage = "https://github.com/kurumeii/aic8800-nix";
     license = licenses.gpl2Only;

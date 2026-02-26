@@ -60,8 +60,13 @@ in
     # Add the driver kernel module package
     boot.extraModulePackages = [ cfg.package ];
 
-    # Automatically load the module if enabled
-    boot.kernelModules = mkIf cfg.autoload [ "aic8800_fdrv" ];
+    # Automatically load the modules if enabled
+    # aic_load_fw must load before aic8800_fdrv: it handles firmware upload
+    # and BT initialization for combo (WiFi+BT) chips like the D81 variant
+    boot.kernelModules = mkIf cfg.autoload [
+      "aic_load_fw"
+      "aic8800_fdrv"
+    ];
 
     # Install firmware files to /run/current-system/firmware/
     hardware.firmware = [ cfg.package ];

@@ -1,14 +1,20 @@
-# AIC8800D80 WiFi Driver for NixOS
+# AIC8800D80 WiFi + Bluetooth Driver for NixOS
 
-Linux kernel driver for AIC8800D80 WiFi 6 chipset with full NixOS support.
+Linux kernel driver for AIC8800D80/D81 WiFi 6 + Bluetooth chipset with full NixOS support.
 
 ## Supported Devices
 
-This driver supports USB WiFi adapters based on the AIC8800D80 chipset, including:
+This driver supports USB WiFi adapters based on the AIC8800D80/D81 chipset, including:
 
-- **Tenda U11/U11 Prop** - USB WiFi 6 adapter
+- **Tenda U11/U11 Pro** - USB WiFi 6 adapter
 - **AX913B** - USB WiFi 6 adapter
 - Other devices using vendor IDs: `3020:*`, `368b:*`, `a69c:8d80`
+
+### WiFi+Bluetooth Combo (D81 variant)
+
+Devices with product ID `0x8d81` (e.g. `368b:8d81`) are combo WiFi+BT chips.
+The `aic_load_fw` module handles firmware upload and chip initialization,
+after which the chip re-enumerates with separate WiFi and Bluetooth interfaces.
 
 ## Features
 
@@ -17,6 +23,7 @@ This driver supports USB WiFi adapters based on the AIC8800D80 chipset, includin
 - [x] NixOS-native integration
 - [x] Automatic firmware loading
 - [x] udev rules for device permissions
+- [x] Bluetooth support for combo chips (D81 variant)
 
 ## NixOS Installation
 
@@ -100,11 +107,13 @@ Automatically load the kernel module at boot. Set to `false` if you want to load
 ### WiFi interface doesn't appear
 
 1. Check if the module is loaded:
+
    ```bash
    lsmod | grep aic8800
    ```
 
 2. Check kernel logs:
+
    ```bash
    journalctl -k -b | grep -i aic8800
    ```
@@ -129,20 +138,33 @@ sudo modprobe aic8800_fdrv
 This package includes patches to make the driver work with NixOS:
 
 1. **Firmware path fix**: Changes hardcoded `/lib/firmware` to `/run/current-system/firmware`
-2. **Firmware subdirectory**: Adds `aic8800D80/` prefix to firmware filenames for proper kernel firmware loading
+2. **Firmware subdirectory**: Adds `aic8800D80/` prefix to all firmware filenames for proper kernel firmware loading
+3. **USB ID table fix**: Adds V2 vendor (`368b`) entries for D80/D81 to the firmware loader module
+4. **Kernel compat**: Replaces removed `in_irq()` with `in_hardirq()` for kernel 6.19+
 
 ### Firmware Files
 
 The driver requires firmware files in `/run/current-system/firmware/aic8800D80/`:
 
-- `fmacfw_8800d80_u02.bin` - Main firmware
-- `fmacfw_8800d80_u02_ipc.bin` - IPC firmware
-- `fmacfw_8800d80_h_u02.bin` - High-performance firmware
-- `fmacfw_8800d80_h_u02_ipc.bin` - High-performance IPC firmware
+- `fmacfw_8800d80_u02.bin` - Main WiFi firmware
+- `fmacfw_8800d80_h_u02.bin` - High-performance WiFi firmware
+- `fw_patch_8800d80_u02.bin` - BT patch firmware
+- `fw_adid_8800d80_u02.bin` - BT ADID firmware
+- `fw_patch_table_8800d80_u02.bin` - BT patch table
+- `lmacfw_rf_8800d80_u02.bin` - RF firmware
+- `calibmode_8800d80.bin` - Calibration firmware
+
+### Module Architecture
+
+Two kernel modules are built and loaded:
+
+1. **`aic_load_fw`** - Firmware loader and BT initializer. Loads first, uploads firmware to the chip via USB. For combo chips (D81), it reboots the chip to enable Bluetooth interfaces.
+2. **`aic8800_fdrv`** - WiFi driver. Claims the vendor-specific WiFi interface after firmware is loaded.
 
 ### Kernel Compatibility
 
 Tested on:
+
 - Linux 6.12.x
 - Linux 6.11.x
 - Linux 6.10.x
@@ -174,6 +196,7 @@ sudo reboot
 ```
 
 ## License
+
 GPL-2.0-only
 The driver code is based on the AIC8800 Linux driver from AIC semiconductor.
 
